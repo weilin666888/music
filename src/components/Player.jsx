@@ -443,6 +443,32 @@ export default function Player({ tracks, currentIndex, onChangeIndex, forcePlayK
       if (loadTimeoutRef.current) {
         clearTimeout(loadTimeoutRef.current)
       }
+
+
+
+      
+// 加这个useEffect块（如果没有，放在return之前）
+useEffect(() => {
+  const audio = audioRef.current;
+  if (!audio || !tracks || tracks.length === 0) return;
+
+  const handleEnded = () => {
+    // 歌曲结束，自动下一首（循环播放）
+    let nextIndex = currentIndex + 1;
+    if (nextIndex >= tracks.length) {
+      nextIndex = 0;  // 循环到第一首
+    }
+    onChangeIndex(nextIndex);  // 切换索引，触发播放
+  };
+
+  audio.addEventListener('ended', handleEnded);
+
+  return () => {
+    audio.removeEventListener('ended', handleEnded);  // 清理，避免重复
+  };
+}, [currentIndex, tracks, onChangeIndex]);  // 依赖：索引、歌单、切换函数
+
+
       
       // 清理预加载音频
       if (preloadAudioRef.current) {
