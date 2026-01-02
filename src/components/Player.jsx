@@ -53,8 +53,6 @@ export default function Player({ tracks, currentIndex, onChangeIndex, forcePlayK
  
   const { song, artist } = parseTrackTitle(currentTrack?.title)
  
- 
- 
   useEffect(() => {
     const initAudioContext = async () => {
       try {
@@ -582,6 +580,7 @@ export default function Player({ tracks, currentIndex, onChangeIndex, forcePlayK
     return () => clearTimeout(preloadTimer)
   }, [currentIndex, tracks, hasTracks])
   const play = async () => {
+    console.log('尝试播放:', currentTrack?.title, 'isPlaying:', isPlaying, 'hasInteracted:', hasInteracted); // 日志：播放尝试
     const audio = audioRef.current
     if (!audio) return Promise.reject(new Error('No audio element'))
    
@@ -631,9 +630,10 @@ export default function Player({ tracks, currentIndex, onChangeIndex, forcePlayK
       try {
         await audio.play()
         setIsPlaying(true)
+        console.log('播放成功:', currentTrack?.title); // 日志：成功
         return Promise.resolve()
       } catch (playError) {
-        console.warn('Audio play failed, but continuing:', playError.message)
+        console.warn('自动播放失败:', playError.message); // 日志：失败
         // 如果是网络问题，尝试重新加载
         if (playError.name === 'NotSupportedError' || playError.name === 'NotAllowedError') {
           try {
@@ -641,9 +641,10 @@ export default function Player({ tracks, currentIndex, onChangeIndex, forcePlayK
             await new Promise(resolve => setTimeout(resolve, 1000))
             await audio.play()
             setIsPlaying(true)
+            console.log('重试播放成功:', currentTrack?.title); // 日志：重试成功
             return Promise.resolve()
           } catch (retryError) {
-            console.warn('Retry play failed:', retryError.message)
+            console.warn('重试播放失败:', retryError.message); // 日志：重试失败
           }
         }
         setIsPlaying(false)
@@ -825,24 +826,24 @@ export default function Player({ tracks, currentIndex, onChangeIndex, forcePlayK
     }
   }
   const onEnded = () => {
-     if (loopMode === 'one') {
-       audioRef.current.currentTime = 0;
-       play();  // 单曲循环，重播当前
-       return;
-     }
-     const idx = nextIndex();
-     if (idx === currentIndex && !shuffle) {
-       pause();
-       return;
-     }
-     onChangeIndex(idx);  // 切换到下一首
-     // 新增：强制播放下一首（确保自动）
-     setTimeout(() => {
-       setIsPlaying(true);  // 设置播放状态
-       play().catch(e => console.warn('自动播放下一首失败:', e));  // 尝试播放，捕获浏览器错误
-     }, 100);  // 稍等加载
-   };
+    console.log('歌曲结束！当前:', currentTrack?.title, '模式:', loopMode, '随机:', shuffle); // 日志：结束触发
+    if (loopMode === 'one') {
+      audioRef.current.currentTime = 0;
+      play();  // 单曲循环，重播当前
+      return;
+    }
+    const idx = nextIndex();
+    if (idx === currentIndex && !shuffle) {
+      pause();
+      return;
+    }
+    onChangeIndex(idx);  // 切换到下一首
+    // 优化：不强制play，让useEffect统一处理（避免冲突）
+    setIsPlaying(true);  // 确保状态true，useEffect会播放
+    console.log('切换到索引:', idx, '下一首:', tracks[idx]?.title); // 日志：切换
+  };
   useEffect(() => {
+    console.log('歌曲切换 useEffect, 当前索引:', currentIndex, 'isPlaying:', isPlaying, 'hasInteracted:', hasInteracted); // 日志：切换
     const audio = audioRef.current
     if (!audio) return
    
